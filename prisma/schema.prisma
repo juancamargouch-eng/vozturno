@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Clinic {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  address   String?
+  phone     String?
+  active    Boolean  @default(true)
+  voiceConfig String?   @default("es-PE-AlexNeural") // Voz preferida de la clínica
+  
+  areas     Area[]
+  patients  Patient[]
+  turnos    Turno[]
+  users     User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("STAFF") // SUPER_ADMIN, CLINIC_ADMIN, STAFF
+  
+  clinicId  String?
+  clinic    Clinic?   @relation(fields: [clinicId], references: [id])
+  
+  areas     Area[]    // Áreas a las que tiene acceso
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Patient {
+  id        String   @id @default(cuid())
+  dni       String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  clinicId  String
+  clinic    Clinic   @relation(fields: [clinicId], references: [id])
+  turnos    Turno[]
+
+  @@unique([dni, clinicId]) // El DNI es único por clínica
+}
+
+model Area {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  order       Int      @default(0)
+  capacity    Int      @default(0) // Límite de atenciones diarias (0 = ilimitado)
+  
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+  
+  // Flujo de trabajo
+  nextAreaId  String?
+  nextArea    Area?    @relation("AreaFlow", fields: [nextAreaId], references: [id])
+  prevAreas   Area[]   @relation("AreaFlow")
+  
+  users       User[]   // Usuarios con acceso a esta área
+  
+  turnos      Turno[]
+  history     CallHistory[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, clinicId]) // El nombre del área es único por clínica
+}
+
+model Turno {
+  id          String     @id @default(cuid())
+  number      String
+  status      String     @default("WAITING") // WAITING, CALLED, IN_PROGRESS, COMPLETED, CANCELLED
+  priority    Boolean    @default(false)
+  
+  patientId   String
+  patient     Patient    @relation(fields: [patientId], references: [id])
+  
+  areaId      String
+  area        Area       @relation(fields: [areaId], references: [id])
+  
+  clinicId    String
+  clinic      Clinic     @relation(fields: [clinicId], references: [id])
+  
+  calledBy    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  calls       CallHistory[]
+}
+
+model CallHistory {
+  id        String   @id @default(cuid())
+  turnoId   String
+  turno     Turno    @relation(fields: [turnoId], references: [id])
+  areaId    String
+  area      Area     @relation(fields: [areaId], references: [id])
+  status    String
+  timestamp DateTime @default(now())
+}

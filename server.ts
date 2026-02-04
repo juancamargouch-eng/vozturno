@@ -61,8 +61,8 @@ app.prepare().then(() => {
         });
     });
 
-    // Capturar todas las peticiones con Next.js sin usar patrones de ruta (Compatible con Express 5)
-    server.all("(.*)", (req, res) => {
+    // Capturar todas las peticiones con Next.js (La forma más segura en Express 5 para catch-all)
+    server.use((req, res) => {
         return handle(req, res);
     });
 

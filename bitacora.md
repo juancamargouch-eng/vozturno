@@ -31,5 +31,6 @@
 - **Endurecimiento de Seguridad (Prod):** Eliminados secretos "fallback" del código. Ahora el sistema requiere `JWT_SECRET` para arrancar en producción.
 - **Seguridad de Red:** Restringidos los orígenes de WebSockets (CORS) y configuradas políticas de CSP básicas mediante Helmet.
 - **Parametrización:** El servidor ahora respeta las variables de entorno `PORT`, `HOSTNAME` y `ALLOWED_ORIGINS`.
+- **Hito de Despliegue:** Sistema VozTurno desplegado con éxito en **Render** (`vozturno.onrender.com`) utilizando PostgreSQL en la nube y soporte completo de WebSockets.
 
 ---

@@ -26,18 +26,65 @@ Si quieres PostgreSQL gratuito de alto rendimiento:
 2. Conecta tu repositorio de GitHub.
 3. Configura los siguientes parámetros:
    - **Environment:** `Node`
-   - **Build Command:** `npm install && npx prisma generate && npm run build`
-   - **Start Command:** `npx tsx server.ts` (o `node server.js` si compilaste a JS)
-     > [!TIP]
-     > Para producción, es mejor compilar y usar un proceso optimizado, pero `npx tsx` funciona bien para empezar.
+   - **Build Command:** `npm install && npx prisma generate && npx prisma db push && npx prisma db seed && npm run build`
+     > [!IMPORTANT]
+     > Hemos añadido `npx prisma db push` (para crear las tablas) y `npx prisma db seed` (para crear el usuario admin inicial).
+   - **Start Command:** `npx tsx server.ts`
 
 ### Paso 4: Configurar Variables de Entorno (En Render)
 Ve a la pestaña **Environment** de tu servicio y agrega:
 - `NODE_ENV`: `production`
 - `DATABASE_URL`: (La que copiaste en el Paso 2)
-- `JWT_SECRET`: (Una clave larga y aleatoria)
-- `ALLOWED_ORIGINS`: `https://tu-app.onrender.com` (Tu URL final)
+- `JWT_SECRET`: (Una clave larga y aleatoria) Juancamargo2026*
+- `ALLOWED_ORIGINS`: `https://vozturno.onrender.com` (Tu URL final)
 - `PORT`: `10000` (Render asigna uno automáticamente, pero puedes forzarlo)
+
+---
+
+## Migración de Datos (Local a Producción)
+
+Si ya tienes datos en tu PostgreSQL local (clínicas, usuarios, áreas) y quieres pasarlos a Render exactamente como están, sigue estos pasos:
+
+### Opción A: Usando el Backup Completo
+
+Si el comando anterior te dio un error de `syntax error at or near "ÿþ"`, es porque PowerShell guardó el archivo en un formato incorrecto (UTF-16). Debes volver a generar el backup de esta manera:
+
+1. **Volver a generar el backup (Correcto):**
+   Usa el parámetro `-f` y los flags `--no-owner --no-privileges` para evitar errores de permisos en la nube:
+   ```powershell
+   & "C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" -U postgres -d vozturno --no-owner --no-privileges -f C:\Users\juanc\backup_completo.sql
+   ```
+
+2. **Subir el respaldo a Render:**
+   Ejecuta el siguiente comando (si ves algunos errores de "must be able to SET ROLE", no te preocupes, son normales en Render y la subida funciona igual):
+   ```powershell
+   & "C:\Program Files\PostgreSQL\17\bin\psql.exe" "URL_DE_PRODUCCION_RENDER" -f C:\Users\juanc\backup_completo.sql
+   ```
+
+2. **Verificar:**
+   Si el comando termina sin errores, entra a tu aplicación en Render y verifica que tus datos locales ya estén disponibles allá.
+
+> [!CAUTION]
+> Si el comando falla por "tablas existentes", es recomendable limpiar la base de datos de Render antes de subir el backup completo, o usar el Backup de solo datos (Paso 1 de la sección anterior) si las tablas ya fueron creadas por Prisma.
+
+### Opción B: Usando el script Seed (Recomendado si tus datos son iniciales)
+
+Si lo que quieres es simplemente que el usuario admin y los datos base estén ahí:
+1. Asegúrate de que `prisma/seed.ts` tenga los datos que deseas.
+2. Ejecuta localmente apuntando a producción (Paso 2 de la sección anterior).
+
+---
+
+## ¿Cómo crear el Admin si la base de datos está vacía?
+
+Si ya desplegaste y no puedes entrar, tienes dos opciones:
+
+1. **Opción Render (Automática):** Actualiza tu "Build Command" en la configuración de Render para incluir `npx prisma db push && npx prisma db seed` (como se muestra arriba) y dale a "Manual Deploy" -> "Clear Build Cache & Deploy".
+2. **Opción Local (Manual):**
+   - En tu computadora, abre la terminal en la carpeta del proyecto.
+   - Cambia **temporalmente** tu archivo `.env` local para que `DATABASE_URL` apunte a la de producción (la de Neon o Render).
+   - Ejecuta: `npx prisma db push` y luego `npx prisma db seed`.
+   - **IMPORTANTE:** Regresa tu `.env` local a su estado original después de hacerlo.
 
 ---
 
